@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as readline from "readline";
+import { z, ZodType } from "zod";
 
 /**
  * This is a JSDoc comment. Similar to JavaDoc, it documents a public-facing
@@ -12,26 +13,52 @@ import * as readline from "readline";
  * You shouldn't need to alter them.
  * 
  * @param path The path to the file being loaded.
- * @returns a "promise" to produce a 2-d array of cell values
+ * @param schema Zod schema describing each row
+ * @param hasHeaderRow Whether the CSV includes a header row
+ * @returns Promise with parsed results:
+ * {
+ *   data: T[]; // all successfully validated rows
+ *   errors: { row: number; raw: string[]; error: z.ZodError }[]; // validation failures
+ *   headers: string[]; // empty if hasHeaderRow=false
+ * }
  */
-export async function parseCSV(path: string): Promise<string[][]> {
-  // This initial block of code reads from a file in Node.js. The "rl"
-  // value can be iterated over in a "for" loop. 
+export async function parseCSV<T>(path: string, schema: ZodType<T>, hasHeaderRow: boolean): Promise<{
+  data: T[];
+  errors: { row: number; raw: string[]; error: z.ZodError }[];
+  headers: string[];
+}> {
   const fileStream = fs.createReadStream(path);
   const rl = readline.createInterface({
     input: fileStream,
-    crlfDelay: Infinity, // handle different line endings
+    crlfDelay: Infinity,
   });
-  
-  // Create an empty array to hold the results
-  let result = []
-  
-  // We add the "await" here because file I/O is asynchronous. 
-  // We need to force TypeScript to _wait_ for a row before moving on. 
-  // More on this in class soon!
+
+  let data: T[] = [];
+  let errors: { row: number; raw: string[]; error: z.ZodError }[] = [];
+  let headers: string[] = [];
+
+  let rowIndex = 0;
   for await (const line of rl) {
+    rowIndex++;
     const values = line.split(",").map((v) => v.trim());
-    result.push(values)
+
+    if (rowIndex === 1 && hasHeaderRow) {
+      headers = values;
+      continue;
+    }
+
+    // If header row is present, convert array into an object keyed by headers
+    const input = hasHeaderRow
+      ? Object.fromEntries(headers.map((h, i) => [h, values[i] ?? ""]))
+      : values;
+
+    const parsed = schema.safeParse(input);
+    if (parsed.success) {
+      data.push(parsed.data);
+    } else {
+      errors.push({ row: rowIndex, raw: values, error: parsed.error });
+    }
   }
-  return result
+
+  return { data, errors, headers };
 }
