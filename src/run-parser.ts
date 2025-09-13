@@ -1,5 +1,5 @@
 import { parseCSV } from "./basic-parser";
-
+import { z } from "zod";
 /*
   Example of how to run the parser outside of a test suite.
 */
@@ -7,15 +7,29 @@ import { parseCSV } from "./basic-parser";
 const DATA_FILE = "./data/people.csv"; // update with your actual file name
 
 async function main() {
-  // Because the parseCSV function needs to "await" data, we need to do the same here.
-  const results = await parseCSV(DATA_FILE)
 
-  // Notice the difference between "of" and "in". One iterates over the entries, 
-  // another iterates over the indexes only.
-  for(const record of results)
-    console.log(record)
-  for(const record in results)
-    console.log(record)
+  const personSchema = z.object({
+  name: z.string(),
+  age: z.coerce.number(),
+});
+
+const results = await parseCSV(DATA_FILE, personSchema, true);
+
+  // Print headers
+  console.log("Headers:", results.headers);
+
+  // Print valid rows
+  console.log("\nValid rows:");
+  for (const record of results.data) {
+    console.log(record);
+  }
+
+  // Print errors
+  console.log("\nErrors:");
+  for (const e of results.errors) {
+    console.log(`Row ${e.row} failed:`, e.raw);
+    console.log("Zod issues:", e.error.issues);
+  }
 }
 
 main();
