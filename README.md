@@ -34,6 +34,8 @@ Integration with Zod schemas for validation during parsing.
 
 ### 1340 Supplement
 
+**REFLECTION**
+
 - #### 1. Correctness
 
 - #### 2. Random, On-Demand Generation
@@ -47,4 +49,4 @@ Integration with Zod schemas for validation during parsing.
 
 #### Collaborators (cslogins of anyone you worked with on this project and/or generative AI): n/a
 #### Total estimated time it took to complete project: 2
-#### Link to GitHub Repo:  
+#### Link to GitHub Repo: https://github.com/cs0320-f25/typescript-csv-carlos-freire2.git
